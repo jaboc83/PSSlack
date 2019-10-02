@@ -1,4 +1,4 @@
-function Send-SlackApi
+function Send-SlackApi 
 {
     <#
     .SYNOPSIS
@@ -24,6 +24,9 @@ function Send-SlackApi
     .PARAMETER Proxy
         Proxy server to use
 
+    .PARAMETER ContentType
+        Message content type to use
+
     .PARAMETER ForceVerbose
         If specified, don't explicitly remove verbose output from Invoke-RestMethod
 
@@ -46,20 +49,22 @@ function Send-SlackApi
 
         [ValidateNotNullOrEmpty()]
         [ValidateScript({
-            if (-not $_ -and -not $Script:PSSlack.Token)
-            {
-                throw 'Please supply a Slack Api Token with Set-SlackApiToken.'
-            }
-            else
-            {
-                $true
-            }
-        })]
+                if (-not $_ -and -not $Script:PSSlack.Token)
+                {
+                    throw 'Please supply a Slack Api Token with Set-SlackApiToken.'
+                }
+                else
+                {
+                    $true
+                }
+            })]
         [string]$Token = $Script:PSSlack.Token,
 
         [string]$Proxy = $Script:PSSlack.Proxy,
 
-        [switch]$ForceVerbose = $Script:PSSlack.ForceVerbose
+        [switch]$ForceVerbose = $Script:PSSlack.ForceVerbose,
+
+        [string]$ContentType = $Script:PSSlack.ContentType
     )
     $Params = @{
         Uri = "https://slack.com/api/$Method"
@@ -78,7 +83,7 @@ function Send-SlackApi
 
     try {
         $Response = $null
-        $Response = Invoke-RestMethod @Params -Body $Body
+        $Response = Invoke-RestMethod @Params -Body $Body -ContentType $ContentType
     }
     catch {
         # (HTTP 429 is "Too Many Requests")

@@ -1,15 +1,15 @@
 #Get public and private function definition files.
-    $Public  = @( Get-ChildItem -Path $PSScriptRoot\Public\*.ps1 -ErrorAction SilentlyContinue )
-    $Private = @( Get-ChildItem -Path $PSScriptRoot\Private\*.ps1 -ErrorAction SilentlyContinue )
-    $ModuleRoot = $PSScriptRoot
+$Public  = @( Get-ChildItem -Path $PSScriptRoot\Public\*.ps1 -ErrorAction SilentlyContinue )
+$Private = @( Get-ChildItem -Path $PSScriptRoot\Private\*.ps1 -ErrorAction SilentlyContinue )
+$ModuleRoot = $PSScriptRoot
 
 # Import System.Drawing Assembly
-    Try {
-        Add-Type -Assembly System.Drawing
-    }
-    Catch {
-        Write-Error -Message "Failed to import System.Drawing assembly: $_"
-    }
+Try {
+    Add-Type -Assembly System.Drawing
+}
+Catch {
+    Write-Error -Message "Failed to import System.Drawing assembly: $_"
+}
 
 #Dot source the files
 Foreach($import in @($Public + $Private))
@@ -25,42 +25,43 @@ Foreach($import in @($Public + $Private))
 }
 
 #Create / Read config
-    $script:_PSSlackXmlpath = Get-PSSlackConfigPath
-    if(-not (Test-Path -Path $script:_PSSlackXmlpath -ErrorAction SilentlyContinue))
-    {
-        Try
-        {
-            Write-Warning "Did not find config file $($script:_PSSlackXmlpath), attempting to create"
-            [pscustomobject]@{
-                Uri = $null
-                Token = $null
-                ArchiveUri = $null
-                Proxy = $null
-                MapUser = $null
-                ForceVerbose = $False
-            } | Export-Clixml -Path $($script:_PSSlackXmlpath) -Force -ErrorAction Stop
-        }
-        Catch
-        {
-            Write-Warning "Failed to create config file $($script:_PSSlackXmlpath): $_"
-        }
-    }
-
-#Initialize the config variable.  I know, I know...
+$script:_PSSlackXmlpath = Get-PSSlackConfigPath
+if(-not (Test-Path -Path $script:_PSSlackXmlpath -ErrorAction SilentlyContinue))
+{
     Try
     {
-        #Import the config
-        $PSSlack = $null
-        $PSSlack = Get-PSSlackConfig -Source PSSlack.xml -ErrorAction Stop
+        Write-Warning "Did not find config file $($script:_PSSlackXmlpath), attempting to create"
+        [pscustomobject]@{
+            Uri = $null
+            Token = $null
+            ArchiveUri = $null
+            Proxy = $null
+            MapUser = $null
+            ForceVerbose = $False
+            ContentType = $null
+        } | Export-Clixml -Path $($script:_PSSlackXmlpath) -Force -ErrorAction Stop
     }
     Catch
     {
-        Write-Warning "Error importing PSSlack config: $_"
+        Write-Warning "Failed to create config file $($script:_PSSlackXmlpath): $_"
     }
+}
+
+#Initialize the config variable.  I know, I know...
+Try
+{
+    #Import the config
+    $PSSlack = $null
+    $PSSlack = Get-PSSlackConfig -Source PSSlack.xml -ErrorAction Stop
+}
+Catch
+{
+    Write-Warning "Error importing PSSlack config: $_"
+}
 
 $_PSSlackUserMap = @{}
 if($PSSlack.MapUser){
-  $_PSSlackUserMap = Get-SlackUserMap -Update
+    $_PSSlackUserMap = Get-SlackUserMap -Update
 }
 
 # Create a hashtable for use with the "leaky bucket" rate-limiting algorithm. (Some of Slack's API calls will fail if you request them too quickly.)

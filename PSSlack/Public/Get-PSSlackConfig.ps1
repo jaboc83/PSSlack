@@ -33,7 +33,7 @@
         $Path = $script:_PSSlackXmlpath
     )
 
-    if($PSCmdlet.ParameterSetName -eq 'source' -and $Source -eq "PSSlack" -and -not $PSBoundParameters.ContainsKey('Path'))
+    if($PSCmdlet.ParameterSetName -eq 'source' -and $Source -eq "PSSlack" -and -not $PSBoundParameters.ContainsKey('Path')) 
     {
         $Script:PSSlack
     }
@@ -50,11 +50,12 @@
         }
         Import-Clixml -Path $Path |
             Select-Object -Property ArchiveUri,
-                                    @{l='Uri';e={Decrypt $_.Uri}},
-                                    @{l='Token';e={Decrypt $_.Token}},
-                                    Proxy,
-                                    MapUser,
-                                    ForceVerbose
+            @{l='Uri';e={Decrypt $_.Uri}},
+            @{l='Token';e={Decrypt $_.Token}},
+            Proxy,
+            MapUser,
+            ForceVerbose,
+            ContentType
     }
 
 }

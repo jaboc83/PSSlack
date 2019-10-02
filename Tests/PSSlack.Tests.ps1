@@ -5,11 +5,11 @@ $ModulePath = Join-Path $ENV:BHProjectPath $ModuleName
 # Verbose output for non-master builds on appveyor
 # Handy for troubleshooting.
 # Splat @Verbose against commands as needed (here or in pester tests)
-    $Verbose = @{}
-    if($ENV:BHBranchName -notlike "master" -or $env:BHCommitMessage -match "!verbose")
-    {
-        $Verbose.add("Verbose",$True)
-    }
+$Verbose = @{}
+if($ENV:BHBranchName -notlike "master" -or $env:BHCommitMessage -match "!verbose") 
+{
+    $Verbose.add("Verbose",$True)
+}
 
 Import-Module $ModulePath -Force
 
@@ -17,6 +17,7 @@ $TestUri = 'TestUri'
 $TestToken = 'TestToken'
 $TestArchive = 'TestArchive'
 $TestProxy = 'TestProxy'
+$TestContentType = 'TestContentType'
 
 $AlternativePath = 'TestDrive:\ThisSlackXml.xml'
 
@@ -45,11 +46,13 @@ Describe "PSSlack Module PS$PSVersion" {
             $Props -contains 'Token' | Should Be $True
             $Props -contains 'ArchiveUri' | Should Be $True
             $Props -contains 'Proxy' | Should Be $True
+            $Props -contains 'ContentType' | Should Be $True
 
             $Config.Uri | Should BeNullOrEmpty
             $Config.Token | Should BeNullOrEmpty
             $Config.ArchiveUri | Should BeNullOrEmpty
             $Config.Proxy | Should BeNullOrEmpty
+            $Config.ContentType | Should BeNullOrEmpty
         }
     }
 }
@@ -65,6 +68,7 @@ Describe "Set-PSSlackConfig PS$PSVersion" {
                 Token = $TestToken
                 ArchiveUri = $TestArchive
                 Proxy = $TestProxy
+                ContentType = $TestContentType
             }
             Set-PSSlackConfig @params
             $Config = Import-Clixml "$env:TEMP\$env:USERNAME-$env:COMPUTERNAME-PSSlack.xml"
@@ -73,6 +77,7 @@ Describe "Set-PSSlackConfig PS$PSVersion" {
             $Config.Token | Should BeOfType System.Security.SecureString
             $Config.ArchiveUri | Should Be 'TestArchive'
             $Config.Proxy | Should Be 'TestProxy'
+            $Config.ContentType | Should Be 'TestContentType'
         }
 
         It 'Should set a user-specified file' {
@@ -82,6 +87,7 @@ Describe "Set-PSSlackConfig PS$PSVersion" {
                 ArchiveUri = "$TestArchive`x"
                 Proxy = "$TestProxy`x"
                 Path = $AlternativePath
+                ContentType = "$TestContentType"
             }
             Set-PSSlackConfig @params
             $Config = Import-Clixml $AlternativePath
@@ -90,6 +96,7 @@ Describe "Set-PSSlackConfig PS$PSVersion" {
             $Config.Token | Should BeOfType System.Security.SecureString
             $Config.ArchiveUri | Should Be 'TestArchivex'
             $Config.Proxy | Should Be 'TestProxyx'
+            $Config.ContentType | Should Be 'TestContentType'
         }
     }
 }
@@ -106,6 +113,7 @@ Describe "Get-PSSlackConfig PS$PSVersion" {
             $Config.Token | Should Be 'TestToken'
             $Config.ArchiveUri | Should Be 'TestArchive'
             $Config.Proxy | Should Be 'TestProxy'
+            $Config.ContentType | Should Be 'TestContentType'
         }
 
         It 'Should read PSSlack variable' {
@@ -115,7 +123,8 @@ Describe "Get-PSSlackConfig PS$PSVersion" {
             $Config.Token | Should Be 'TestToken'
             $Config.ArchiveUri | Should Be 'TestArchivex' #From running alternate path test before...
             $Config.Proxy | Should Be 'TestProxyx' #From running alternate path test before...
-    }
+            $Config.ContentType | Should Be 'TestContentType' 
+        }
 
         It 'Should read a user-specified file' {
             # We've tested set... use it here.
@@ -125,6 +134,7 @@ Describe "Get-PSSlackConfig PS$PSVersion" {
                 ArchiveUri = "$TestArchive`x"
                 Proxy = "$TestProxy`x"
                 Path = $AlternativePath
+                ContentType = $TestContentType
             }
             Set-PSSlackConfig @params
 
@@ -134,12 +144,13 @@ Describe "Get-PSSlackConfig PS$PSVersion" {
             $Config.Token | Should Be 'TestToken'
             $Config.ArchiveUri | Should Be 'TestArchivex'
             $Config.Proxy | Should Be 'TestProxyx'
+            $Config.ContentType | Should Be 'TestContentType'
         }
     }
 }
 
 # Tests have passed, rely on set-psslackconfig...
-Set-PSSlackConfig -Uri $null -Token $null -ArchiveUri $null -Proxy $null
+Set-PSSlackConfig -Uri $null -Token $null -ArchiveUri $null -Proxy $null -ContentType $null
 
 
 Describe "Send-SlackMessage PS$PSVersion" {
@@ -170,11 +181,12 @@ Describe "Send-SlackMessage PS$PSVersion" {
 
         It 'Should not pass parameters if not specified' {
             $x = Send-SlackMessage -Token Token -Text 'Hi'
-            # 6 we see here, 2 are from ForceVerbose resulting in Verbose $False...
-            $x.arg.count | Should Be 8
+            # 6 we see here, 1 for content-type value, 1 for body value, 2 are from ForceVerbose resulting in Verbose $False...
+            $x.arg.count | Should Be 10
             $x.arg -contains '-Body:' | Should Be $True
             $x.arg -contains '-Method:' | Should Be $True
             $x.arg -contains '-Token:' | Should Be $True
+            $x.arg -contains '-ContentType:' | Should Be $True
             $x.arg -contains 'Token' | Should Be $True
             $x.arg -contains 'chat.postMessage' | Should Be $True
         }
@@ -205,16 +217,16 @@ Describe 'New-SlackMessageAttachment' {
 
     It 'Should Be an Array with Three Members, when Piped Three Times' {
         $message = New-SlackMessageAttachment -text "test1" -Fallback 'Test1' |
-          New-SlackMessageAttachment -text "test2" -Fallback "test2" |
-          New-SlackMessageAttachment -text "test3" -FallBack "test3"
+            New-SlackMessageAttachment -text "test2" -Fallback "test2" |
+            New-SlackMessageAttachment -text "test3" -FallBack "test3"
         $message.Count | Should -BeExactly 3
     }
     It 'Should Be an Array with Five Members, when Piped Five Times' {
         $message = New-SlackMessageAttachment -text "test1" -Fallback 'Test1' |
-          New-SlackMessageAttachment -text "test2" -Fallback "test2" |
-          New-SlackMessageAttachment -text "test3" -FallBack "test3" |
-          New-SlackMessageAttachment -text "test4" -Fallback "test4" |
-          New-SlackMessageAttachment -text "test5" -Fallback "test5" 
+            New-SlackMessageAttachment -text "test2" -Fallback "test2" |
+            New-SlackMessageAttachment -text "test3" -FallBack "test3" |
+            New-SlackMessageAttachment -text "test4" -Fallback "test4" |
+            New-SlackMessageAttachment -text "test5" -Fallback "test5" 
         $message.Count | Should -BeExactly 5
     }
 }

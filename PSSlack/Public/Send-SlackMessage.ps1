@@ -28,6 +28,11 @@ function Send-SlackMessage {
 
         Default value is the value set by Set-PSSlackConfig
 
+    .PARAMETER ContentType
+        Set the content type of the message.
+
+        Default value is the value set by Set-PSSlackConfig.
+
     .PARAMETER SlackMessage
         A SlackMessage created by New-SlackMessage
 
@@ -92,7 +97,7 @@ function Send-SlackMessage {
 
         *** WARNING ***
         This will expose your token in verbose output
-
+    
     .EXAMPLE
         # This example shows a crudely crafted message without any attachments,
         # using parameters from Send-SlackMessage to construct the message.
@@ -248,55 +253,59 @@ function Send-SlackMessage {
         [ValidateNotNullOrEmpty()]
         [string]$Proxy = $Script:PSSlack.Proxy,
 
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [string]$ContentType = $Script:PSSlack.ContentType,
+
         [PSTypeName('PSSlack.Message')]
         [parameter(ParameterSetName = 'SlackMessage',
-                   ValueFromPipeline = $True)]
+            ValueFromPipeline = $True)]
         $SlackMessage,
 
         $Channel,
 
         [parameter(ParameterSetName = 'Param',
-                   ValueFromPipelineByPropertyName = $True,
-                   Position = 1)]
+            ValueFromPipelineByPropertyName = $True,
+            Position = 1)]
         $Text,
 
         [parameter(ParameterSetName = 'Param',
-                   ValueFromPipelineByPropertyName = $True)]
+            ValueFromPipelineByPropertyName = $True)]
         $Username,
 
         [parameter(ParameterSetName = 'Param',
-                   ValueFromPipelineByPropertyName = $True)]
+            ValueFromPipelineByPropertyName = $True)]
         $IconUrl,
 
         [parameter(ParameterSetName = 'Param',
-                   ValueFromPipelineByPropertyName = $True)]
+            ValueFromPipelineByPropertyName = $True)]
         $IconEmoji,
 
         [parameter(ParameterSetName = 'Param',
-                   ValueFromPipelineByPropertyName = $True)]
+            ValueFromPipelineByPropertyName = $True)]
         [switch]$AsUser,
 
         [parameter(ParameterSetName = 'Param',
-                   ValueFromPipelineByPropertyName = $True)]
+            ValueFromPipelineByPropertyName = $True)]
         [switch]$LinkNames,
 
         [parameter(ParameterSetName = 'Param',
-                   ValueFromPipelineByPropertyName = $True)]
+            ValueFromPipelineByPropertyName = $True)]
         [validateset('full','none')]
         [string]$Parse = 'none',
 
         [parameter(ParameterSetName = 'Param',
-                   ValueFromPipelineByPropertyName = $True)]
+            ValueFromPipelineByPropertyName = $True)]
         [validateset($True, $False)]
         [bool]$UnfurlLinks,
 
         [parameter(ParameterSetName = 'Param',
-                   ValueFromPipelineByPropertyName = $True)]
+            ValueFromPipelineByPropertyName = $True)]
         [validateset($True, $False)]
         [bool]$UnfurlMedia,
 
         [parameter(ParameterSetName = 'Param',
-                   ValueFromPipelineByPropertyName = $True)]
+            ValueFromPipelineByPropertyName = $True)]
         [PSTypeName('PSSlack.MessageAttachment')]
         [System.Collections.Hashtable[]]$Attachments,
 
@@ -307,19 +316,22 @@ function Send-SlackMessage {
         Write-Debug "Send-SlackMessage Bound parameters: $($PSBoundParameters | Remove-SensitiveData | Out-String)`nParameterSetName $($PSCmdlet.ParameterSetName)"
         $Messages = @()
         $ProxyParam = @{}
-        if($Proxy)
+        if($Proxy) 
         {
             $ProxyParam.Proxy = $Proxy
         }
     }
-    process
+    process 
     {
-        if($PSCmdlet.ParameterSetName -eq 'Param')
+        if($ContentType -eq "") {
+            $ContentType = "text/plain; charset=utf-8"
+        }
+        if($PSCmdlet.ParameterSetName -eq 'Param') 
         {
             $body = @{ }
 
-            switch ($psboundparameters.keys)
-            {
+            switch ($psboundparameters.keys) 
+            { 
                 'channel'     {$body.channel = $channel }
                 'text'        {$body.text     = $text}
                 'username'    {$body.username = $username}
@@ -342,21 +354,21 @@ function Send-SlackMessage {
             }
         }
     }
-    end
+    end 
     {
-        foreach($Message in $Messages)
+        foreach($Message in $Messages) 
         {
-            if($Token -or ($Script:PSSlack.Token -and -not $Uri))
+            if($Token -or ($Script:PSSlack.Token -and -not $Uri)) 
             {
-                if($Message.attachments)
+                if($Message.attachments) 
                 {
                     $Message.attachments = ConvertTo-Json -InputObject @($Message.attachments) -Depth 6 -Compress
                 }
 
                 Write-Verbose "Send-SlackApi -Body $($Message | Format-List | Out-String)"
-                $response = Send-SlackApi @ProxyParam -Method chat.postMessage -Body $Message -Token $Token -ForceVerbose:$ForceVerbose
+                $response = Send-SlackApi @ProxyParam -Method chat.postMessage -Body $Message -Token $Token -ForceVerbose:$ForceVerbose -ContentType:$ContentType
 
-                if ($response.ok)
+                if ($response.ok) 
                 {
                     $link = "$($Script:PSSlack.ArchiveUri)/$($response.channel)/p$($response.ts -replace '\.')"
                     $response | Add-Member -MemberType NoteProperty -Name link -Value $link
@@ -373,9 +385,9 @@ function Send-SlackMessage {
                     $ProxyParam.Add('Verbose', $true)
                 }
                 $json = ConvertTo-Json -Depth 6 -Compress -InputObject $Message
-                Invoke-RestMethod @ProxyParam -Method Post -Body $json -Uri $Uri
+                Invoke-RestMethod @ProxyParam -Method Post -Body $json -Uri $Uri -ContentType:$ContentType
             }
-            else
+            else 
             {
                 Throw 'No Uri or Token specified.  Specify a Uri or Token in the parameters or via Set-PSSlackConfig'
             }
